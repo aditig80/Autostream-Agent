@@ -1,80 +1,52 @@
-# 🎬 AutoStream Conversational AI Agent
+# AutoStream Conversational AI Agent
 
-A Conversational AI Sales Agent for **AutoStream** — a SaaS platform for automated video editing. Built with **LangGraph**, **LangChain**, and **GPT-4o-mini**.
+A LangGraph-powered AI sales agent for AutoStream — a fictional SaaS video editing platform.
 
 ---
 
-## 🚀 How to Run Locally
+## How to Run Locally
 
-### 1. Clone the Repository
+### 1. Clone the repository
 ```bash
 git clone https://github.com/YOUR_USERNAME/autostream-agent.git
 cd autostream-agent
 ```
 
-### 2. Install Dependencies
+### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Set Your OpenAI API Key
-
-**Windows CMD:**
-```cmd
-set OPENAI_API_KEY=your_openai_api_key_here
-```
-**Windows PowerShell:**
-```powershell
-$env:OPENAI_API_KEY="your_openai_api_key_here"
+### 3. Set your API key
+```bash
+export GOOGLE_API_KEY=your_gemini_api_key_here
 ```
 
-### 4. Run the Agent
+### 4. Run the agent
 ```bash
 python agent.py
 ```
 
 ---
 
-## 🏗️ Architecture Explanation
+## Architecture Explanation (~200 words)
 
-This agent is built using **LangGraph**, a stateful graph framework on top of LangChain. LangGraph was chosen because it gives explicit control over the conversation flow through a directed graph of nodes — making it easy to manage multi-turn state, intent routing, and tool execution cleanly and predictably.
+This agent is built using **LangGraph**, a stateful graph framework built on top of LangChain. LangGraph was chosen because it allows explicit control over conversation flow using a directed graph of nodes, making it easy to manage multi-turn state, conditional routing, and tool execution in a clean and inspectable way — unlike a simple chain or a black-box agent loop.
 
-**State Management:** All conversation data is stored in a single `AgentState` TypedDict that persists across turns. It tracks the full message history, detected intent, lead collection progress (name, email, platform), and what info the agent is currently awaiting. This state is passed through the LangGraph on every turn and updated in place — giving the agent complete memory across 5–6+ turns with no external database needed.
+**State Management:** The entire conversation state is stored in a single `AgentState` TypedDict that persists across all turns. It tracks the conversation history (as a list of LangChain messages), the detected intent, the lead collection progress (name, email, platform), and what information the agent is currently awaiting. This state is passed through the graph on every turn and updated in-place, giving the agent full memory across 5–6+ conversation turns without any external database.
 
-**Graph Flow:** Each user message goes through two nodes — `detect_intent` (classifies the message) → `generate_response` (uses RAG or collects lead data). The `mock_lead_capture()` tool is only fired after all three lead details are collected.
-
----
-
-## 📱 WhatsApp Deployment via Webhooks
-
-1. **Get a WhatsApp number** via Twilio or Meta's WhatsApp Business API.
-2. **Build a FastAPI webhook** (`POST /webhook`) that receives incoming messages and passes them to the LangGraph agent.
-3. **Store each user's `AgentState`** in a dictionary or Redis keyed by their phone number, so memory persists between messages.
-4. **Send the agent's reply back** via Twilio's or Meta's messaging API.
-5. **Host publicly** on Railway or Render and register the URL as your webhook in the Twilio/Meta dashboard.
-
-This gives every WhatsApp user their own isolated, persistent session — making the full multi-turn lead capture flow work seamlessly over WhatsApp.
+**Graph Flow:** Each user message triggers a two-node pipeline: `detect_intent` (classifies the user's goal) → `generate_response` (uses RAG retrieval or LLM to respond, or collects lead data). The graph uses conditional edges to decide whether to end the session (after lead capture) or return control to the user.
 
 ---
 
-## 📁 Project Structure
+## WhatsApp Deployment via Webhooks
 
-```
-autostream-agent/
-├── agent.py             # Agent logic (LangGraph + RAG + Intent + Tool)
-├── knowledge_base.json  # Local knowledge base (pricing, policies)
-├── requirements.txt     # Python dependencies
-└── README.md            # This file
-```
+To deploy this agent on WhatsApp:
 
----
+1. **Use Twilio or Meta's WhatsApp Business API** to get a WhatsApp-enabled phone number.
+2. **Create a Flask or FastAPI webhook endpoint** (e.g., `POST /webhook`) that receives incoming WhatsApp messages as JSON payloads.
+3. **Map the sender's phone number to a session** — store each user's `AgentState` in a dictionary or Redis keyed by phone number, so memory persists across messages.
+4. **Run the LangGraph agent** with the incoming message appended to that session's state, then **send the agent's reply back** via Twilio's `client.messages.create()` or Meta's Graph API.
+5. **Host the webhook** on a public server (e.g., Railway, Render, or AWS) with HTTPS, and register the URL in the Twilio/Meta dashboard.
 
-## 📋 Requirements
-
-```
-langgraph>=0.1.0
-langchain>=0.2.0
-langchain-core>=0.2.0
-langchain-openai>=0.1.0
-openai>=1.0.0
-```
+This architecture means each WhatsApp user gets their own isolated, persistent state — making the multi-turn lead capture flow work seamlessly over WhatsApp.
